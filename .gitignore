@@ -2,3 +2,4 @@ filevault
 secret.txt
 retrieved_*.txt
 vault/
+config/
