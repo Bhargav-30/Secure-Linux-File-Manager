@@ -1,5 +1,7 @@
 filevault
 secret.txt
+secret2.txt
+secret3.txt
 retrieved_*.txt
 vault/
 config/
