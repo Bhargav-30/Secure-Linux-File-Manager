@@ -10,18 +10,23 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 
-#include <openssl/sha.h>
+#include "crypto.h"
 
 namespace fs = std::filesystem;
 
 const std::string VAULT_DIR = "vault";
 const std::string AUTH_FILE = "config/auth.dat";
 
+std::string currentPassword;
+
 // --------------------------------------------------
-// SHA-256 PASSWORD HASH
+// PASSWORD HASH
 // --------------------------------------------------
 
+#include <openssl/sha.h>
+
 std::string hashPassword(const std::string& password) {
+
     unsigned char hash[SHA256_DIGEST_LENGTH];
 
     SHA256(
@@ -33,6 +38,7 @@ std::string hashPassword(const std::string& password) {
     std::stringstream ss;
 
     for (unsigned char c : hash) {
+
         ss << std::hex
            << std::setw(2)
            << std::setfill('0')
@@ -47,6 +53,7 @@ std::string hashPassword(const std::string& password) {
 // --------------------------------------------------
 
 std::string readPassword() {
+
     termios oldSettings{};
     termios newSettings{};
 
@@ -55,12 +62,21 @@ std::string readPassword() {
     newSettings = oldSettings;
     newSettings.c_lflag &= ~ECHO;
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &newSettings);
+    tcsetattr(
+        STDIN_FILENO,
+        TCSANOW,
+        &newSettings
+    );
 
     std::string password;
+
     std::getline(std::cin, password);
 
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldSettings);
+    tcsetattr(
+        STDIN_FILENO,
+        TCSANOW,
+        &oldSettings
+    );
 
     std::cout << '\n';
 
@@ -68,22 +84,19 @@ std::string readPassword() {
 }
 
 // --------------------------------------------------
-// CREATE VAULT DIRECTORY
+// CREATE VAULT
 // --------------------------------------------------
 
 void createVault() {
-    struct stat st{};
 
-    if (stat(VAULT_DIR.c_str(), &st) != 0) {
+    fs::create_directories(VAULT_DIR);
+    fs::create_directories("config");
 
-        if (mkdir(VAULT_DIR.c_str(), 0700) != 0) {
-            perror("Unable to create vault");
-        }
-    }
+    chmod(VAULT_DIR.c_str(), 0700);
 }
 
 // --------------------------------------------------
-// FIRST TIME PASSWORD SETUP
+// PASSWORD SETUP
 // --------------------------------------------------
 
 bool setupAuthentication() {
@@ -93,7 +106,7 @@ bool setupAuthentication() {
     }
 
     std::cout << "\n====================================\n";
-    std::cout << "       FIRST TIME SETUP\n";
+    std::cout << "          FIRST TIME SETUP\n";
     std::cout << "====================================\n";
 
     std::string password;
@@ -123,6 +136,7 @@ bool setupAuthentication() {
     }
 
     file << hashPassword(password);
+
     file.close();
 
     chmod(AUTH_FILE.c_str(), 0600);
@@ -133,7 +147,7 @@ bool setupAuthentication() {
 }
 
 // --------------------------------------------------
-// LOGIN
+// AUTHENTICATION
 // --------------------------------------------------
 
 bool authenticate() {
@@ -146,6 +160,7 @@ bool authenticate() {
     }
 
     std::string storedHash;
+
     std::getline(file, storedHash);
 
     file.close();
@@ -156,10 +171,12 @@ bool authenticate() {
 
         std::string password = readPassword();
 
-        std::string enteredHash = hashPassword(password);
+        if (hashPassword(password) == storedHash) {
 
-        if (enteredHash == storedHash) {
+            currentPassword = password;
+
             std::cout << "Authentication successful.\n";
+
             return true;
         }
 
@@ -174,7 +191,7 @@ bool authenticate() {
 }
 
 // --------------------------------------------------
-// STORE FILE
+// STORE ENCRYPTED FILE
 // --------------------------------------------------
 
 void storeFile() {
@@ -184,65 +201,31 @@ void storeFile() {
     std::cout << "\nEnter file path: ";
     std::cin >> filename;
 
-    int source = open(filename.c_str(), O_RDONLY);
-
-    if (source < 0) {
-        perror("Unable to open source file");
+    if (!fs::exists(filename)) {
+        std::cout << "File not found.\n";
         return;
     }
 
     std::string safeName =
         fs::path(filename).filename().string();
 
+    // Store the encrypted version with .enc extension
     std::string destination =
-        VAULT_DIR + "/" + safeName;
+        VAULT_DIR + "/" + safeName + ".enc";
 
-    int target = open(
-        destination.c_str(),
-        O_WRONLY | O_CREAT | O_TRUNC,
-        0600
-    );
+    if (encryptFile(
+            filename,
+            destination,
+            currentPassword)) {
 
-    if (target < 0) {
-        perror("Unable to create vault file");
-        close(source);
-        return;
-    }
+        chmod(destination.c_str(), 0600);
 
-    char buffer[4096];
-    ssize_t bytesRead;
+        std::cout << "File encrypted and stored successfully.\n";
 
-    while ((bytesRead = read(source, buffer, sizeof(buffer))) > 0) {
-
-        ssize_t totalWritten = 0;
-
-        while (totalWritten < bytesRead) {
-
-            ssize_t bytesWritten = write(
-                target,
-                buffer + totalWritten,
-                bytesRead - totalWritten
-            );
-
-            if (bytesWritten < 0) {
-                perror("Write error");
-                close(source);
-                close(target);
-                return;
-            }
-
-            totalWritten += bytesWritten;
-        }
-    }
-
-    if (bytesRead < 0) {
-        perror("Read error");
     } else {
-        std::cout << "File stored successfully.\n";
-    }
 
-    close(source);
-    close(target);
+        std::cout << "Encryption failed.\n";
+    }
 }
 
 // --------------------------------------------------
@@ -271,76 +254,57 @@ void listFiles() {
 }
 
 // --------------------------------------------------
-// RETRIEVE FILE
+// RETRIEVE AND DECRYPT
 // --------------------------------------------------
 
 void retrieveFile() {
 
     std::string filename;
 
-    std::cout << "\nEnter file name: ";
+    std::cout << "\nEnter stored file name: ";
     std::cin >> filename;
 
     std::string sourcePath =
         VAULT_DIR + "/" + filename;
 
-    int source = open(sourcePath.c_str(), O_RDONLY);
+    if (!fs::exists(sourcePath)) {
 
-    if (source < 0) {
-        perror("Unable to open vault file");
+        std::cout << "File not found in vault.\n";
         return;
     }
 
     std::string outputPath =
         "retrieved_" + filename;
 
-    int target = open(
-        outputPath.c_str(),
-        O_WRONLY | O_CREAT | O_TRUNC,
-        0600
-    );
+    if (outputPath.size() >= 4 &&
+        outputPath.substr(
+            outputPath.size() - 4
+        ) == ".enc") {
 
-    if (target < 0) {
-        perror("Unable to create output file");
-        close(source);
-        return;
-    }
-
-    char buffer[4096];
-    ssize_t bytesRead;
-
-    while ((bytesRead = read(source, buffer, sizeof(buffer))) > 0) {
-
-        ssize_t totalWritten = 0;
-
-        while (totalWritten < bytesRead) {
-
-            ssize_t bytesWritten = write(
-                target,
-                buffer + totalWritten,
-                bytesRead - totalWritten
+        outputPath =
+            outputPath.substr(
+                0,
+                outputPath.size() - 4
             );
-
-            if (bytesWritten < 0) {
-                perror("Write error");
-                close(source);
-                close(target);
-                return;
-            }
-
-            totalWritten += bytesWritten;
-        }
     }
 
-    if (bytesRead < 0) {
-        perror("Read error");
+    if (decryptFile(
+            sourcePath,
+            outputPath,
+            currentPassword)) {
+
+        chmod(outputPath.c_str(), 0600);
+
+        std::cout << "File decrypted successfully.\n";
+        std::cout << "Output: "
+                  << outputPath
+                  << '\n';
+
     } else {
-        std::cout << "File retrieved successfully as: "
-                  << outputPath << '\n';
-    }
 
-    close(source);
-    close(target);
+        std::cout << "Decryption failed.\n";
+        std::cout << "Incorrect password or damaged file.\n";
+    }
 }
 
 // --------------------------------------------------
@@ -351,13 +315,14 @@ void deleteFile() {
 
     std::string filename;
 
-    std::cout << "\nEnter file name: ";
+    std::cout << "\nEnter stored file name: ";
     std::cin >> filename;
 
     std::string path =
         VAULT_DIR + "/" + filename;
 
     if (unlink(path.c_str()) != 0) {
+
         perror("Unable to delete file");
         return;
     }
