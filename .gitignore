@@ -6,3 +6,10 @@ retrieved_*.txt
 vault/
 config/
 data/
+# Build files
+*.o
+filemanager
+
+# Runtime files
+logs/
+data/
