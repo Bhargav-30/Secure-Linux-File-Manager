@@ -2,82 +2,85 @@
 
 ## Project Title
 
-Secure Linux File Vault
+Secure Linux File Manager & Kernel Audit System
 
 ## 1. Introduction
 
-Secure Linux File Vault is a C++ based Linux application designed to provide a secure way to store and manage sensitive files.
+Secure Linux File Manager & Kernel Audit System is a C++ based Linux application designed to provide controlled file management while demonstrating Linux system programming and kernel-level interaction.
 
-The application provides a controlled vault where users can store, retrieve, list, and delete files. Security mechanisms such as password authentication, file encryption, integrity verification, access control, and audit logging will be incorporated during development.
+The application allows users to create, read, list, and delete files while demonstrating Linux file descriptors, file permissions, file locking, and communication between user space and the Linux kernel through a character device driver.
 
-The project is implemented specifically for Linux and uses C++ and Linux system programming concepts.
+The project is implemented specifically for Linux using C++ and Linux system programming concepts.
 
 ## 2. Problem Statement
 
-Users often store sensitive files in ordinary directories where files may be accessed, modified, or deleted without sufficient protection.
+File operations performed directly through normal applications may not provide clear visibility into how files are accessed and managed at the system level.
 
-The objective of this project is to develop a lightweight Linux-based file vault that provides controlled access to stored files and detects unauthorized modifications.
+The objective of this project is to develop a Linux-based file management system that demonstrates file operations using Linux system calls, controlled file access, file locking, and kernel-level audit communication.
 
 ## 3. Objectives
 
-The main objectives are:
-
 - Develop a Linux-based file management application using C++.
-- Provide secure storage for sensitive files.
-- Implement password-based authentication.
-- Encrypt files stored inside the vault.
-- Verify file integrity and detect unauthorized modifications.
-- Implement controlled file access.
-- Maintain an audit log of important vault operations.
-- Apply Linux system programming concepts.
+- Implement file creation, reading, listing, and deletion.
+- Demonstrate Linux file descriptors and file operations.
+- Use `open()`, `read()`, `write()`, and `close()`.
+- Demonstrate file permissions and ownership information.
+- Implement file locking.
+- Generate audit events for file operations.
+- Demonstrate user-space to kernel-space communication.
+- Implement a Linux character device driver.
 - Provide a simple command-line interface.
 
 ## 4. Project Scope
 
-The project will include:
+The project includes:
 
-- File storage and retrieval.
-- File listing and deletion.
-- User authentication.
-- File encryption and decryption.
-- Integrity verification.
-- Access control.
-- Operation logging.
-- Linux file-system interaction.
-- Testing and documentation.
+- File creation and storage.
+- File reading.
+- File listing.
+- File deletion.
+- File descriptor based I/O.
+- Linux file permissions.
+- File locking.
+- Audit/event generation.
+- Communication with a Linux character device driver.
+- Kernel logging.
+- Error handling and testing.
 
-The project will be implemented as a software-only Linux application.
+The project is designed as a software-only Linux application.
 
 ## 5. Expected Outcome
 
-The final system will provide a functional command-line file vault capable of securely managing files.
+The expected system will provide the following operations:
 
-The application should allow an authorized user to:
-
-1. Authenticate with the vault.
-2. Store a file securely.
-3. Retrieve a stored file.
-4. View files present in the vault.
-5. Delete files.
-6. Verify file integrity.
-7. View security/audit information.
+1. Create and store a file.
+2. Read a file.
+3. List available files.
+4. Delete a file.
+5. View file permissions.
+6. Modify file permissions.
+7. Demonstrate file locking.
+8. Generate audit events.
+9. Communicate selected audit events to a character device driver.
+10. Display kernel-level audit messages through Linux kernel logging.
 
 ## 6. Target Platform
 
-- Operating System: Linux
+- Operating System: Linux / Ubuntu
 - Programming Language: C++
-- Development Environment: VS Code
 - Compiler: G++
+- Build Tool: Make
+- Development Environment: Visual Studio Code
 - Version Control: Git
 - Repository: GitHub
 
 ## 7. Future Improvements
 
-Possible future improvements include:
+Future improvements may include:
 
-- Multi-user support.
+- Multi-user access management.
+- More detailed permission management.
+- Additional Linux system-call demonstrations.
+- More detailed kernel auditing.
 - Graphical user interface.
-- Remote backup.
-- Advanced access-control policies.
-- Hardware security integration.
-- Improved encryption key management.
+- Remote file-management capabilities.
