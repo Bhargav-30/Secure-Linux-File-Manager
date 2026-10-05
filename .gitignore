@@ -13,3 +13,12 @@ filemanager
 # Runtime files
 logs/
 data/
+
+# Kernel driver build files
+driver/*.o
+driver/*.ko
+driver/*.mod
+driver/*.mod.c
+driver/Module.symvers
+driver/modules.order
+driver/.*.cmd
