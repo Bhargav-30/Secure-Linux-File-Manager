@@ -14,6 +14,8 @@ public:
     bool lockFile(const std::string& path);
 
     bool unlockFile(const std::string& path);
+
+    bool isLocked(const std::string& path) const;
 };
 
 #endif

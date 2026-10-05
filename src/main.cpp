@@ -73,35 +73,49 @@ int main() {
 
         else if (choice == 2) {
 
-            std::string filename;
-            std::string content;
+    std::string filename;
+    std::string content;
 
-            std::cout << "Enter filename: ";
-            std::getline(std::cin, filename);
+    std::cout << "Enter filename: ";
+    std::getline(std::cin, filename);
 
-            if (fileManager.readFile(filename, content)) {
+    std::string path = dataPath + "/" + filename;
 
-                std::cout << "\n----- File Content -----\n";
-                std::cout << content << '\n';
-                std::cout << "------------------------\n";
+    if (lockManager.isLocked(path)) {
 
-                auditLogger.logEvent(
-                    "READ",
-                    filename,
-                    "SUCCESS"
-                );
+        std::cout
+            << "File is currently locked. "
+            << "Unlock it before reading.\n";
 
-            } else {
+        auditLogger.logEvent(
+            "READ",
+            filename,
+            "FAILED_LOCKED"
+        );
 
-                std::cout << "File reading failed.\n";
+    } else if (fileManager.readFile(filename, content)) {
 
-                auditLogger.logEvent(
-                    "READ",
-                    filename,
-                    "FAILED"
-                );
-            }
-        }
+        std::cout << "\n----- File Content -----\n";
+        std::cout << content << '\n';
+        std::cout << "------------------------\n";
+
+        auditLogger.logEvent(
+            "READ",
+            filename,
+            "SUCCESS"
+        );
+
+    } else {
+
+        std::cout << "File reading failed.\n";
+
+        auditLogger.logEvent(
+            "READ",
+            filename,
+            "FAILED"
+        );
+    }
+}
 
         else if (choice == 3) {
 
